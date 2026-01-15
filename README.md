@@ -1,122 +1,88 @@
-# Polymarket Insider Detector - Vercel Edition
+# 🔍 Polymarket Insider Detector
 
-A real-time insider trading detector for Polymarket with phone notifications.
+Real-time detection of suspicious trading activity on Polymarket. Now upgraded with **WebSocket Streaming** for 100% trade coverage and a **Premium Dashboard**.
 
-## Features
+## 🚀 Key Improvements
 
-- 🔄 **Automatic Monitoring** - Cron job runs every 5 minutes
-- 📱 **Phone Notifications** - Pushover, Telegram, or Discord
-- 🎯 **Sports Filtering** - Focuses on politics, crypto, and tech markets
-- 📊 **Web Dashboard** - View alerts in real-time
-- 🚨 **Smart Scoring** - Multi-signal detection system
+1.  **WebSocket Streaming**: Switched from polling to Polymarket's RTDS Activity Feed. Analyzes every single trade in real-time (~20 trades/sec).
+2.  **Premium UI**: New dashboard with Glassmorphism, Inter typography, and improved mobile responsiveness.
+3.  **Hetzner/VPS Optimized**: Designed to run as a persistent process on a VPS for continuous monitoring.
 
-## Quick Deploy
+## 🛠️ Architecture
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/polymarket-insider-vercel)
+The system now supports two modes:
+-   **Live Stream (Recommended)**: A persistent Node.js script (`scripts/stream.mjs`) that consumes the Polymarket WebSocket. Best for catching everything.
+-   **Vercel Cron (Backup)**: A serverless function (`pages/api/cron.js`) that polls the API every 5 minutes. Best for low-maintenance monitoring.
 
-## Setup Instructions
+## 📦 Setup
 
-### 1. Deploy to Vercel
+### 1. Environment Variables
+Copy `.env.example` to `.env.local` and fill in your notification keys (Pushover, Telegram, or Discord).
 
 ```bash
-cd polymarket-insider-vercel
+PUSHOVER_USER_KEY=
+PUSHOVER_API_TOKEN=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+DISCORD_WEBHOOK_URL=
+```
+
+### 2. Live Stream (VPS)
+To run the real-time analyzer (recommended for 100% coverage):
+```bash
 npm install
-vercel
+node scripts/stream.mjs
+```
+*Note: We recommend using `pm2` to keep the process alive on your VPS.*
+
+### 3. Dashboard (Vercel)
+To deploy the monitoring dashboard:
+```bash
+npm install
+npm run dev
 ```
 
-### 2. Configure Notifications
+## 📊 Detection Logic
+The system scores trades based on:
+-   **Wallet Freshness**: New wallets with no previous history.
+-   **Trade Size**: Large swaps ($1,000+) and Whale moves ($5,000+).
+-   **Low Entry**: Buying into outcomes with <10% probability.
+-   **Market Type**: Filtering out noise (sports) to focus on politics/crypto/insider-prone events.
 
-Choose one or more notification methods:
+## 📱 Notifications
+Get instant alerts on your phone via:
+-   **Pushover**: High-priority alerts with custom sounds.
+-   **Telegram**: Rich markdown messages with quick links to markets and wallets.
+-   **Discord**: Detailed embeds with color-coded severity.
 
-#### Option A: Pushover (Recommended for iOS/Android)
+## 🛰️ Scaling & Future Roadmap (Elies' Suggestions)
 
-1. Download [Pushover app](https://pushover.net) on your phone
-2. Create account and get your **User Key**
-3. Create an application to get your **API Token**
-4. Add to Vercel Environment Variables:
-   - `PUSHOVER_USER_KEY` = your user key
-   - `PUSHOVER_API_TOKEN` = your app token
+Following the architectural advice from Elies, the system is designed to scale beyond simple alerts. Here is the plan for full market coverage:
 
-#### Option B: Telegram Bot
+### 1. Full Market Analysis
+- **Volume**: Polymarket generates ~50M trades per month (~20 per second).
+- **Goal**: Analyze 100% of these trades without filtering.
+- **Current Status**: The `stream.mjs` script is already capable of capturing this volume, but requires a stable environment to prevent disconnections.
 
-1. Message [@BotFather](https://t.me/BotFather) on Telegram
-2. Create a new bot with `/newbot`
-3. Copy the **Bot Token**
-4. Start a chat with your bot, then visit:
-   `https://api.telegram.org/bot<TOKEN>/getUpdates`
-5. Find your **Chat ID** in the response
-6. Add to Vercel Environment Variables:
-   - `TELEGRAM_BOT_TOKEN` = your bot token
-   - `TELEGRAM_CHAT_ID` = your chat ID
+### 2. VPS Deployment (Hetzner $5 Strategy)
+- Running this 24/7 on serverless (Vercel/Cloudflare) is inefficient and expensive.
+- **Implementation**: Deploy the `stream.mjs` on a $5/month VPS (like Hetzner or DigitalOcean).
+- **Tooling**: Use `pm2` for process persistence and automatic restarts.
 
-#### Option C: Discord Webhook
+### 3. Local High-Performance Database
+- Services like Convex (Free Tier) often require filtering down to 1-2% of trades to stay within limits.
+- **The Upgrade**: Integrate a local **PostgreSQL or SQLite** database directly on the VPS.
+- **Benefit**: Store and index 100% of trades locally. This allows for:
+    - Long-term wallet tracking (identifying "serial" insiders).
+    - Statistical analysis of win rates across 50M+ events.
+    - Historical backtesting of detection signals.
 
-1. In Discord, go to Server Settings → Integrations → Webhooks
-2. Create a new webhook and copy the URL
-3. Add to Vercel Environment Variables:
-   - `DISCORD_WEBHOOK_URL` = your webhook URL
+### 4. Advanced Wallet Profiling
+- Transition from "Snapshot Scoring" (one trade) to "Behavioral Scoring" (history of a wallet over months).
+- Database-backed lookups for every new proxy wallet detected in the stream.
 
-### 3. Enable Cron Jobs
+## ⚠️ Credits & Discussion
+Based on the insights from **Elies Telecos** regarding the WebSocket endpoint and VPS-based database storage. This move from crons/polling to persistent streaming is what allows for true "Insider Detection" at scale.
 
-Vercel Pro/Enterprise is required for cron jobs. The free tier allows manual triggering.
-
-For Vercel Pro, cron is automatically configured via `vercel.json`:
-```json
-{
-  "crons": [
-    {
-      "path": "/api/cron",
-      "schedule": "*/5 * * * *"
-    }
-  ]
-}
-```
-
-### 4. Test Your Setup
-
-Visit your deployed site and click "📱 Test Notification" to verify everything works.
-
-## Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `PUSHOVER_USER_KEY` | Pushover user key | Optional |
-| `PUSHOVER_API_TOKEN` | Pushover app token | Optional |
-| `TELEGRAM_BOT_TOKEN` | Telegram bot token | Optional |
-| `TELEGRAM_CHAT_ID` | Telegram chat ID | Optional |
-| `DISCORD_WEBHOOK_URL` | Discord webhook URL | Optional |
-| `CRON_SECRET` | Secret for cron auth (optional security) | Optional |
-
-## API Endpoints
-
-- `GET /api/alerts` - Fetch current alerts
-- `GET /api/cron` - Run detection (called by Vercel cron)
-- `POST /api/test-notification` - Send test notification
-
-## Detection Signals
-
-| Signal | Score | Description |
-|--------|-------|-------------|
-| FRESH_WALLET | +30 | Wallet has traded ≤4 markets |
-| NEW_WALLET | +20 | Wallet is <30 days old |
-| EXTREME_WHALE | +60 | Trade >$10,000 |
-| WHALE_TRADE | +40 | Trade >$5,000 |
-| EXTREME_LOW_ENTRY | +35 | Buying at <10¢ |
-| LOW_PRICE_ENTRY | +20 | Buying at <15¢ |
-| ANONYMOUS | +20 | No username set |
-
-## Alert Levels
-
-- **CRITICAL** (Score ≥100): Immediate notification
-- **HIGH** (Score ≥75): Immediate notification
-- **MEDIUM** (Score ≥50): Dashboard only
-
-## Limitations
-
-- Free Vercel tier: No automatic cron, manual refresh only
-- Vercel Pro: Cron runs every 5 minutes minimum
-- Historical wallet data may be limited by Polymarket API
-
-## License
-
-MIT
+---
+*Created for real-time monitoring of prediction markets.*
